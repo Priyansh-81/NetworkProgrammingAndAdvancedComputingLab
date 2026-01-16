@@ -90,9 +90,9 @@ int main(){
         printf("\nString to check: %s received\n",buff);
         char temp[100];
         if(isPallin(buff)){
-            snprintf(temp, sizeof(temp),"Length: %zu\nVowel Count: %d\n",strlen(buff), numVowels(buff));
+            snprintf(temp, sizeof(temp),"Palindrome\nLength: %zu\nVowel Count: %d\n",strlen(buff), numVowels(buff));
         }else{
-            strcpy(temp,"\nNot a palindrome\n");
+            snprintf(temp, sizeof(temp),"Not a Palindrome\nLength: %zu\nVowel Count: %d\n",strlen(buff), numVowels(buff));
         }
         int sendack=sendto(s,temp, strlen(temp)+1,0,(struct sockaddr*)&client,clen);
         if(sendack==-1){
