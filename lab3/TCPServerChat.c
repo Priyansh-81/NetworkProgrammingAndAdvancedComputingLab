@@ -5,7 +5,7 @@
 #include<netinet/in.h>
 #include<string.h>
 #include<unistd.h>
-#include<signal.h>
+
 
 int main(){
     int port_num;
@@ -13,7 +13,7 @@ int main(){
     scanf("%d",&port_num);
 
     struct sockaddr_in client, server;
-    
+
     int s=socket(AF_INET,SOCK_STREAM,0);
 
     if(s==-1){
@@ -75,7 +75,7 @@ int main(){
                 close(s);
                 return 0;
             }
-            
+
         }else{
             //parent process
             char msg[1024];

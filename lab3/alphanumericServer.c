@@ -1,105 +1,114 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<unistd.h>
+#include<string.h>
 #include<sys/types.h>
 #include<sys/socket.h>
 #include<netinet/in.h>
-#include<string.h>
-#include<unistd.h>
-#include<signal.h>
+#include<ctype.h>
+#include<sys/wait.h>
 
-int main(){
+void digits(char *in, char *out) {
+    int d[100], n = 0;
+
+    for(int i = 0; in[i]; i++) {
+        if(isdigit(in[i]))
+            d[n++] = in[i] - '0';
+    }
+
+    for(int i = 0; i < n-1; i++)
+        for(int j = i+1; j < n; j++)
+            if(d[i] > d[j]) {
+                int t = d[i]; d[i] = d[j]; d[j] = t;
+            }
+
+    int k = 0;
+    for(int i = 0; i < n; i++)
+        out[k++] = d[i] + '0';
+
+    out[k] = '\0';
+}
+
+void chars(char *in, char *out) {
+    char c[100];
+    int n = 0;
+
+    for(int i = 0; in[i]; i++) {
+        if(isalpha(in[i]))
+            c[n++] = in[i];
+    }
+
+    for(int i = 0; i < n-1; i++)
+        for(int j = i+1; j < n; j++)
+            if(c[i] < c[j]) {
+                char t = c[i]; c[i] = c[j]; c[j] = t;
+            }
+
+    c[n] = '\0';
+    strcpy(out, c);
+}
+
+int main() {
     int port_num;
     printf("Enter the port number: ");
-    scanf("%d",&port_num);
+    scanf("%d", &port_num);
 
-    struct sockaddr_in client, server;
-    
-    int s=socket(AF_INET,SOCK_STREAM,0);
-
-    if(s==-1){
-        printf("\nSocket Creation failed\n");
+    int s = socket(AF_INET, SOCK_STREAM, 0);
+    if(s == -1) {
+        perror("Socket");
         return 0;
     }
 
-    server.sin_addr.s_addr=INADDR_ANY;
-    server.sin_family=AF_INET;
-    server.sin_port=htons(port_num);
+    struct sockaddr_in server, client;
+    socklen_t clen = sizeof(client);
 
-    printf("\nSocket created\n");
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(port_num);
 
-    int r=bind(s,(struct sockaddr*)&server,sizeof(server));
-
-    if(r==-1){
-        printf("\nBinding failed\n");
-        close(s);
+    if(bind(s, (struct sockaddr*)&server, sizeof(server)) == -1){
+        perror("Bind");
         return 0;
     }
-    printf("\nBinding successful\n");
 
-    int l=listen(s,1);
-    if(l==-1){
-        printf("Server listening issues\n");
-        return 0;
-    }
-    printf("\nServer is listening\n");
-    printf("Server is ready\n");
-    socklen_t clen=sizeof(client);
+    listen(s, 1);
+    printf("Waiting for client...\n");
 
-    int acp=accept(s,(struct sockaddr*)&client,&clen);
+    int ack = accept(s, (struct sockaddr*)&client, &clen);
+    printf("Client connected\n");
 
-    if(acp==-1){
-        printf("\nFailed to connect to client\n");
-        close(s);
-        return 0;
-    }
-    printf("\nConnected to client\n");
     char buff[1024];
-    int pid=fork();
 
-    while(1){
-        if(pid==0){
-            //child process
-            int recack=recv(acp,buff,sizeof(buff)-1,0);
-            if(recack==-1){
-                printf("Message receive failed\n");
-                close(acp);
-                close(s);
-                return 0;
-            }
-            buff[recack]='\0';
-            printf("\nPID: %d\nMessage Received : %s\n",getpid(),buff);
+    while(1) {
+        int n = recv(ack, buff, sizeof(buff)-1, 0);
+        if(n <= 0) break;
 
-            if(strcmp(buff,"BYE")==0){
-                printf("\nExiting communication\n");
-                close(acp);
-                close(s);
-                return 0;
-            }
-            
-        }else{
-            //parent process
-            char msg[1024];
-            printf("Enter the message to send: ");
-            fflush(stdout);
-            fgets(msg, sizeof(msg), stdin);
-            msg[strcspn(msg, "\n")] = 0;
-            int sendack=send(acp,msg,strlen(msg)+1,0);
-            if(sendack==-1){
-                printf("\nMessage send failed\n");
-                close(acp);
-                close(s);
-                return 0;
-            }
-            printf("\nPID: %d\nMessage Sent\n",getpid());
-            if(strcmp(msg,"BYE")==0){
-                printf("\nEnding commuication\n");
-                close(acp);
-                close(s);
-                return 0;
-            }
+        buff[n] = '\0';
+
+        if(strcmp(buff, "exit") == 0)
+            break;
+
+        int pid = fork();
+
+        if(pid == 0) {   // Child → digits
+            char result[256], sendbuff[512];
+            digits(buff, result);
+            sprintf(sendbuff, "Child PID: %d | Digits Ascending: %s",
+                    getpid(), result);
+            send(ack, sendbuff, strlen(sendbuff), 0);
+            exit(0);
+        }
+        else {          // Parent → characters
+            char result[256], sendbuff[512];
+            chars(buff, result);
+            sprintf(sendbuff, "Parent PID: %d | Characters Descending: %s",
+                    getpid(), result);
+            send(ack, sendbuff, strlen(sendbuff), 0);
+            wait(NULL);   // wait for child
         }
     }
-    close(acp);
+
+    close(ack);
     close(s);
     return 0;
 }
