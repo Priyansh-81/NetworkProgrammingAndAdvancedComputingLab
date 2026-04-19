@@ -1,0 +1,17 @@
+Write two separate C programs (one for server and other for client) using socket APIs
+for TCP and UDP to perform the following. The user at the client side has an option
+to enter:
+1. Registration Number
+2. Name of the Student
+3. Subject Code.
+The Client sends the selected option along with the requisite details to the server.
+Based on the options received the parent process in the server assigns the task to
+respective child process.
+(a) If registration number is sent then the first child process sends Name and
+Residential Address of the student along with the PID of the child process.
+(b) If Name of the Student is received then the second child process sends student
+enrollment details (Dept., Semester, Section and Courses Registered) along
+with the PID of the child process.
+(c) If Subject Code is entered then the third child process sends the corresponding
+marks obtained in that subject along with its PID.
+(d) The details sent by the server have to be displayed at the client.
